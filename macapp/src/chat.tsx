@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { getCurrentWindow } from '@electron/remote'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -446,7 +448,7 @@ export default function Chat() {
               <p className="text-sm text-gray-500">All conversations are encrypted and sandboxed 🔒</p>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-4">
               {messages.map((msg, idx) => (
                 <div key={idx}>
                   {/* Thinking Time */}
@@ -464,32 +466,64 @@ export default function Chat() {
                   
                   {/* Thinking Details */}
                   {msg.role === 'assistant' && expandedThinking.has(idx) && msg.thinkingDetails && (
-                    <div className="mb-2 bg-[#1a1a1a] border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 space-y-1">
-                      <div>→ Processing with {model} in sandboxed environment</div>
-                      <div>→ Network access: BLOCKED ✓</div>
-                      <div>→ Encryption: ACTIVE ✓</div>
-                      {msg.thinkingDetails.evalDuration && (
-                        <div>→ Inference time: {msg.thinkingDetails.evalDuration.toFixed(2)}s</div>
-                      )}
-                      {msg.thinkingDetails.evalCount && (
-                        <div>→ Tokens generated: {msg.thinkingDetails.evalCount}</div>
-                      )}
-                      {msg.thinkingDetails.tokensPerSecond && (
-                        <div>→ Speed: {msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</div>
-                      )}
+                    <div className="mb-3 bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 text-xs space-y-2">
+                      <div className="text-gray-300 font-semibold mb-2">Processing Details:</div>
+                      <div className="space-y-1 text-gray-400 font-mono">
+                        <div>• Model: <span className="text-blue-400">{model}</span></div>
+                        <div>• Environment: <span className="text-green-400">Sandboxed ✓</span></div>
+                        <div>• Network: <span className="text-red-400">Blocked ✓</span></div>
+                        <div>• Encryption: <span className="text-green-400">Active ✓</span></div>
+                        {msg.thinkingDetails.evalDuration && (
+                          <div>• Inference time: <span className="text-purple-400">{msg.thinkingDetails.evalDuration.toFixed(2)}s</span></div>
+                        )}
+                        {msg.thinkingDetails.evalCount && (
+                          <div>• Tokens generated: <span className="text-purple-400">{msg.thinkingDetails.evalCount}</span></div>
+                        )}
+                        {msg.thinkingDetails.tokensPerSecond && (
+                          <div>• Processing speed: <span className="text-purple-400">{msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</span></div>
+                        )}
+                      </div>
                     </div>
                   )}
                   
-                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-                    <div
-                      className={`rounded-2xl px-4 py-3 max-w-[80%] ${
-                        msg.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-[#2a2a2a] text-gray-100'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                    </div>
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'user' ? (
+                      <div className="rounded-2xl px-4 py-3 max-w-[80%] bg-[#343541] text-gray-100">
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-100 text-sm leading-relaxed max-w-full prose prose-invert prose-sm">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code: ({node, inline, className, children, ...props}) => {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline ? (
+                                <pre className="bg-black rounded-lg p-4 overflow-x-auto my-2">
+                                  <code className={`text-sm ${className}`} {...props}>
+                                    {children}
+                                  </code>
+                                </pre>
+                              ) : (
+                                <code className="bg-[#2a2a2a] px-1.5 py-0.5 rounded text-sm" {...props}>
+                                  {children}
+                                </code>
+                              )
+                            },
+                            p: ({children}) => <p className="mb-2">{children}</p>,
+                            ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                            ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                            li: ({children}) => <li className="ml-2">{children}</li>,
+                            h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-4">{children}</h1>,
+                            h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
+                            h3: ({children}) => <h3 className="text-base font-bold mb-2 mt-2">{children}</h3>,
+                            blockquote: ({children}) => <blockquote className="border-l-4 border-gray-600 pl-4 italic my-2">{children}</blockquote>,
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
