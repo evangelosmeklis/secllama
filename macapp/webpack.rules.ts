@@ -32,4 +32,8 @@ export const rules: Required<ModuleOptions>['rules'] = [
     test: /\.svg$/,
     use: ['@svgr/webpack'],
   },
+  {
+    test: /\.(png|jpg|jpeg|gif|ico)$/,
+    type: 'asset/resource',
+  },
 ]

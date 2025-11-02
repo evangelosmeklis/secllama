@@ -281,11 +281,9 @@ export default function Chat() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center space-x-2">
-            <img 
-              src={require('../../secllama_icon.png')} 
-              alt="SecLlama" 
-              className="w-8 h-8 rounded-lg"
-            />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+              🔒
+            </div>
             <span className="font-semibold text-lg">SecLlama</span>
           </div>
         </div>
@@ -441,11 +439,9 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <img 
-                src={require('../../secllama_icon.png')} 
-                alt="SecLlama" 
-                className="w-16 h-16 rounded-2xl mb-4"
-              />
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-4xl mb-4">
+                🔒
+              </div>
               <h2 className="text-2xl font-semibold text-gray-200 mb-2">How can I help you today?</h2>
               <p className="text-sm text-gray-500">All conversations are encrypted and sandboxed 🔒</p>
             </div>
