@@ -163,9 +163,7 @@ app.on('before-quit', () => {
 })
 
 // Disable auto-updates for SecLlama (security fork)
-const updateURL = `` // `https://ollama.com/api/update?os=${process.platform}&arch=${
-  process.arch
-}&version=${app.getVersion()}&id=${id()}`
+const updateURL = '' // Disabled: https://ollama.com/api/update
 
 let latest = ''
 async function isNewReleaseAvailable() {
