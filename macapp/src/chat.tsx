@@ -43,6 +43,8 @@ export default function Chat() {
     encryptionActive: false,
     details: []
   })
+  const [encryptionKey, setEncryptionKey] = useState<string>('')
+  const [showKey, setShowKey] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -267,12 +269,38 @@ export default function Chat() {
                 </div>
               </div>
 
-              <button
-                onClick={() => verifySecurityFeatures()}
-                className="w-full bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-              >
-                🔄 Refresh Verification
-              </button>
+              <div className="bg-[#0d0d0d] rounded-lg p-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-400">Encryption Key:</h3>
+                  <button
+                    onClick={() => setShowKey(!showKey)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <div className="font-mono text-xs text-gray-300 bg-black rounded p-3 break-all">
+                  {showKey ? (encryptionKey || 'Loading...') : '••••••••••••••••••••••••••••••••'}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This key is stored securely in your macOS Keychain and used for AES-256-GCM encryption.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button
+                  onClick={() => verifySecurityFeatures()}
+                  className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                >
+                  🔄 Refresh
+                </button>
+                <button
+                  onClick={openHistoryFolder}
+                  className="bg-gray-700 hover:bg-gray-600 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                >
+                  📁 Open Folder
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -559,9 +587,11 @@ export default function Chat() {
               <button
                 onClick={sendMessage}
                 disabled={loading || !input.trim() || !model}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                className="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:hover:bg-gray-600 rounded-full p-2 transition-colors flex items-center justify-center"
               >
-                {loading ? 'Sending...' : 'Send'}
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
               </button>
             </div>
             {models.length === 0 && (
