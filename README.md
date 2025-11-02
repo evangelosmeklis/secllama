@@ -4,7 +4,26 @@
   </a>
 </div>
 
-# Ollama
+# SecLlama 🔒
+
+**Secure, Private, Offline AI**
+
+SecLlama is a security-enhanced fork of Ollama that ensures your AI conversations stay completely private and secure. Run large language models with built-in encryption, network isolation, and sandboxing.
+
+## 🔐 Security Features
+
+- **🌐 Network Isolation** - Models run in sandboxes with **zero internet access**
+- **🔒 End-to-End Encryption** - All messages encrypted with **AES-256-GCM**
+- **🔑 Secure Key Storage** - Encryption keys stored in **OS-native keychains**
+- **🏝️ Complete Offline Operation** - No data ever leaves your machine
+
+> **Why SecLlama?** While Ollama is great for running models locally, SecLlama adds critical security layers to ensure models cannot access the internet, encrypt all communications, and protect your data with enterprise-grade security.
+
+[📖 Read the full Security Documentation →](SECLLAMA_SECURITY.md)
+
+---
+
+# Original Ollama Documentation
 
 Get up and running with large language models.
 

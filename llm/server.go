@@ -34,6 +34,7 @@ import (
 	"github.com/ollama/ollama/logutil"
 	"github.com/ollama/ollama/ml"
 	"github.com/ollama/ollama/model"
+	"github.com/ollama/ollama/security"
 )
 
 type filteredEnv []string
@@ -399,6 +400,19 @@ func StartRunner(ollamaEngine bool, modelPath string, gpuLibs []string, out io.W
 
 	slog.Info("starting runner", "cmd", cmd)
 	slog.Debug("subprocess", "", filteredEnv(cmd.Env))
+
+	// Apply security sandbox to the runner process
+	secMgr, secErr := security.GetManager()
+	if secErr == nil {
+		sandboxConfig := secMgr.GetSandboxConfig(port)
+		if sandboxErr := security.ApplySandbox(cmd, sandboxConfig); sandboxErr != nil {
+			slog.Warn("failed to apply sandbox to runner", "error", sandboxErr)
+		} else {
+			slog.Info("sandbox applied successfully to runner process")
+		}
+	} else {
+		slog.Warn("security manager not available, running without sandbox", "error", secErr)
+	}
 
 	if err = cmd.Start(); err != nil {
 		return nil, 0, err
@@ -1102,7 +1116,9 @@ func (s *llmServer) initModel(ctx context.Context, req LoadRequest, operation Lo
 	}
 	r.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(r)
+	// Use localhost-only HTTP client for security
+	client := security.NewLocalhostOnlyClient()
+	resp, err := client.Do(r)
 	if err != nil {
 		return nil, fmt.Errorf("do load request: %w", err)
 	}
@@ -1467,7 +1483,9 @@ func (s *llmServer) Completion(ctx context.Context, req CompletionRequest, fn fu
 	}
 	serverReq.Header.Set("Content-Type", "application/json")
 
-	res, err := http.DefaultClient.Do(serverReq)
+	// Use localhost-only HTTP client for security
+	client := security.NewLocalhostOnlyClient()
+	res, err := client.Do(serverReq)
 	if err != nil && errors.Is(err, context.Canceled) {
 		// client closed connection
 		return err

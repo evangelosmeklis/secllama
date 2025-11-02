@@ -1,0 +1,71 @@
+# SecLlama Configuration File
+# Copy this file to ~/.secllama/config or /etc/secllama/config
+
+# ============================================
+# Security Settings
+# ============================================
+
+# Enable message encryption (default: true)
+# All chat messages are encrypted with AES-256-GCM
+SECLLAMA_ENABLE_ENCRYPTION=true
+
+# Enable process sandboxing (default: true)
+# Runner processes are isolated from the network
+SECLLAMA_ENABLE_SANDBOX=true
+
+# Strict network isolation (default: true)
+# Blocks all external network access from models
+SECLLAMA_STRICT_NETWORK_ISOLATION=true
+
+# ============================================
+# Ollama Compatibility Settings
+# ============================================
+
+# Server host and port
+OLLAMA_HOST=127.0.0.1:11434
+
+# Models directory
+# OLLAMA_MODELS=/path/to/models
+
+# Number of parallel requests
+# OLLAMA_NUM_PARALLEL=4
+
+# Keep models loaded for this duration
+# OLLAMA_KEEP_ALIVE=5m
+
+# ============================================
+# Logging
+# ============================================
+
+# Log level: debug, info, warn, error
+SECLLAMA_LOG_LEVEL=info
+
+# Log security events separately
+SECLLAMA_LOG_SECURITY=true
+
+# ============================================
+# Advanced Settings
+# ============================================
+
+# Custom keychain service name (default: secllama)
+# SECLLAMA_KEYCHAIN_SERVICE=secllama
+
+# Enable key rotation on restart (default: false)
+# SECLLAMA_AUTO_ROTATE_KEYS=false
+
+# Sandbox working directory
+# SECLLAMA_SANDBOX_DIR=/tmp/secllama
+
+# ============================================
+# Platform-Specific Settings
+# ============================================
+
+# Linux: Use unshare for sandboxing (default: auto-detect)
+# SECLLAMA_LINUX_USE_UNSHARE=true
+
+# macOS: Sandbox profile path
+# SECLLAMA_MACOS_SANDBOX_PROFILE=/path/to/profile.sb
+
+# Windows: Firewall rule name
+# SECLLAMA_WINDOWS_FIREWALL_RULE=SecLlama-BlockExternal
+

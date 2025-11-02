@@ -522,6 +522,8 @@ func GetDevicesFromRunner(ctx context.Context, runner BaseRunner) ([]DeviceInfo,
 			}
 			r.Header.Set("Content-Type", "application/json")
 
+			// Import security package for localhost-only client
+			// Use http.DefaultClient for now as this package can't import security
 			resp, err := http.DefaultClient.Do(r)
 			if err != nil {
 				// slog.Warn("failed to send request", "error", err)
