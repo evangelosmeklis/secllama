@@ -281,9 +281,11 @@ export default function Chat() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              SL
-            </div>
+            <img 
+              src={require('../../secllama_icon.png')} 
+              alt="SecLlama" 
+              className="w-8 h-8 rounded-lg"
+            />
             <span className="font-semibold text-lg">SecLlama</span>
           </div>
         </div>
@@ -439,9 +441,11 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mb-4">
-                SL
-              </div>
+              <img 
+                src={require('../../secllama_icon.png')} 
+                alt="SecLlama" 
+                className="w-16 h-16 rounded-2xl mb-4"
+              />
               <h2 className="text-2xl font-semibold text-gray-200 mb-2">How can I help you today?</h2>
               <p className="text-sm text-gray-500">All conversations are encrypted and sandboxed 🔒</p>
             </div>
@@ -449,76 +453,57 @@ export default function Chat() {
             <div className="max-w-3xl mx-auto space-y-6">
               {messages.map((msg, idx) => (
                 <div key={idx}>
-                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className="flex items-start space-x-3 max-w-[80%]">
-                      {msg.role === 'assistant' && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                          <span className="text-white text-xs font-bold">SL</span>
-                        </div>
+                  {/* Thinking Time */}
+                  {msg.role === 'assistant' && msg.thinkingTime && (
+                    <button
+                      onClick={() => toggleThinking(idx)}
+                      className="mb-2 flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                    >
+                      <span className={`transform transition-transform ${expandedThinking.has(idx) ? 'rotate-90' : ''}`}>
+                        ▶
+                      </span>
+                      <span>Thought for {msg.thinkingTime.toFixed(1)} seconds</span>
+                    </button>
+                  )}
+                  
+                  {/* Thinking Details */}
+                  {msg.role === 'assistant' && expandedThinking.has(idx) && msg.thinkingDetails && (
+                    <div className="mb-2 bg-[#1a1a1a] border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 space-y-1">
+                      <div>→ Processing with {model} in sandboxed environment</div>
+                      <div>→ Network access: BLOCKED ✓</div>
+                      <div>→ Encryption: ACTIVE ✓</div>
+                      {msg.thinkingDetails.evalDuration && (
+                        <div>→ Inference time: {msg.thinkingDetails.evalDuration.toFixed(2)}s</div>
                       )}
-                      <div className="flex-1">
-                        {/* Thinking Time */}
-                        {msg.role === 'assistant' && msg.thinkingTime && (
-                          <button
-                            onClick={() => toggleThinking(idx)}
-                            className="mb-2 flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors"
-                          >
-                            <span className={`transform transition-transform ${expandedThinking.has(idx) ? 'rotate-90' : ''}`}>
-                              ▶
-                            </span>
-                            <span>💡 Thought for {msg.thinkingTime.toFixed(1)} seconds</span>
-                          </button>
-                        )}
-                        
-                        {/* Thinking Details */}
-                        {msg.role === 'assistant' && expandedThinking.has(idx) && msg.thinkingDetails && (
-                          <div className="mb-2 bg-[#1a1a1a] border border-gray-800 rounded-lg p-3 text-xs font-mono text-gray-400 space-y-1">
-                            <div>→ Processing with {model} in sandboxed environment</div>
-                            <div>→ Network access: BLOCKED ✓</div>
-                            <div>→ Encryption: ACTIVE ✓</div>
-                            {msg.thinkingDetails.evalDuration && (
-                              <div>→ Inference time: {msg.thinkingDetails.evalDuration.toFixed(2)}s</div>
-                            )}
-                            {msg.thinkingDetails.evalCount && (
-                              <div>→ Tokens generated: {msg.thinkingDetails.evalCount}</div>
-                            )}
-                            {msg.thinkingDetails.tokensPerSecond && (
-                              <div>→ Speed: {msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</div>
-                            )}
-                          </div>
-                        )}
-                        
-                        <div
-                          className={`rounded-2xl px-4 py-3 ${
-                            msg.role === 'user'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-[#2a2a2a] text-gray-100'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                        </div>
-                      </div>
-                      {msg.role === 'user' && (
-                        <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                          <span className="text-gray-300 text-xs">You</span>
-                        </div>
+                      {msg.thinkingDetails.evalCount && (
+                        <div>→ Tokens generated: {msg.thinkingDetails.evalCount}</div>
                       )}
+                      {msg.thinkingDetails.tokensPerSecond && (
+                        <div>→ Speed: {msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+                    <div
+                      className={`rounded-2xl px-4 py-3 max-w-[80%] ${
+                        msg.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#2a2a2a] text-gray-100'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                     </div>
                   </div>
                 </div>
               ))}
               {loading && (
-                <div className="flex justify-start">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">SL</span>
-                    </div>
-                    <div className="bg-[#2a2a2a] rounded-2xl px-4 py-3">
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
+                <div className="flex justify-start mb-4">
+                  <div className="bg-[#2a2a2a] rounded-2xl px-4 py-3">
+                    <div className="flex space-x-2">
+                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                     </div>
                   </div>
                 </div>
