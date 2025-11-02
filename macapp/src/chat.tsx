@@ -83,6 +83,18 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const openHistoryFolder = async () => {
+    try {
+      const { exec } = require('child_process')
+      const os = require('os')
+      const path = require('path')
+      const historyDir = path.join(os.homedir(), '.secllama')
+      exec(`open "${historyDir}"`)
+    } catch (error) {
+      console.error('Failed to open history folder:', error)
+    }
+  }
+
   const verifySecurityFeatures = async () => {
     const details: string[] = []
     let sandboxActive = false
@@ -311,10 +323,7 @@ export default function Chat() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-              🔒
-            </div>
-            <span className="font-semibold text-lg">SecLlama</span>
+            <span className="font-bold text-xl bg-gradient-to-r from-blue-500 to-purple-600 text-transparent bg-clip-text">SecLlama</span>
           </div>
         </div>
 
@@ -451,11 +460,8 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-4xl mb-4">
-                🔒
-              </div>
               <h2 className="text-2xl font-semibold text-gray-200 mb-2">How can I help you today?</h2>
-              <p className="text-sm text-gray-500">All conversations are encrypted and sandboxed 🔒</p>
+              <p className="text-sm text-gray-500">All conversations are encrypted and sandboxed</p>
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-4">
