@@ -288,8 +288,11 @@ function init() {
   server()
 
   if (store.get('first-time-run') && installed()) {
+    // Open chat window on startup
+    openChatWindow()
+    
     if (process.platform === 'darwin') {
-      app.dock.hide()
+      app.dock.show() // Keep dock visible when chat is open
     }
 
     app.setLoginItemSettings({ openAtLogin: app.getLoginItemSettings().openAtLogin })
