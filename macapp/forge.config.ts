@@ -73,6 +73,14 @@ const config: ForgeConfig = {
               js: './src/preload.ts',
             },
           },
+          {
+            html: './src/chat.html',
+            js: './src/chat-renderer.tsx',
+            name: 'chat_window',
+            preload: {
+              js: './src/preload.ts',
+            },
+          },
         ],
       },
     }),

@@ -17,8 +17,10 @@ if (require('electron-squirrel-startup')) {
 const store = new Store()
 
 let welcomeWindow: BrowserWindow | null = null
+let chatWindow: BrowserWindow | null = null
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string
+declare const CHAT_WINDOW_WEBPACK_ENTRY: string
 
 const logger = winston.createLogger({
   transports: [
@@ -84,6 +86,32 @@ function firstRunWindow() {
   })
 }
 
+function openChatWindow() {
+  if (chatWindow) {
+    chatWindow.focus()
+    return
+  }
+
+  chatWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    minWidth: 600,
+    minHeight: 400,
+    title: 'SecLlama Chat',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  })
+
+  require('@electron/remote/main').enable(chatWindow.webContents)
+
+  chatWindow.loadURL(CHAT_WINDOW_WEBPACK_ENTRY)
+  chatWindow.on('closed', () => {
+    chatWindow = null
+  })
+}
+
 let tray: Tray | null = null
 let updateAvailable = false
 const assetPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', '..', 'assets')
@@ -116,6 +144,12 @@ function updateTray() {
 
   const menu = Menu.buildFromTemplate([
     ...(updateAvailable ? updateItems : []),
+    {
+      label: 'Open Chat',
+      click: () => openChatWindow(),
+      accelerator: 'Command+N'
+    },
+    { type: 'separator' },
     { role: 'quit', label: 'Quit SecLlama', accelerator: 'Command+Q' },
   ])
 
