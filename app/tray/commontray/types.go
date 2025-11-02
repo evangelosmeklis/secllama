@@ -1,8 +1,8 @@
 package commontray
 
 var (
-	Title   = "Ollama"
-	ToolTip = "Ollama"
+	Title   = "SecLlama"
+	ToolTip = "SecLlama - Secure AI"
 
 	UpdateIconName = "tray_upgrade"
 	IconName       = "tray"
@@ -15,7 +15,7 @@ type Callbacks struct {
 	ShowLogs   chan struct{}
 }
 
-type OllamaTray interface {
+type OllamaTray interface { // Note: kept as OllamaTray for code compatibility
 	GetCallbacks() Callbacks
 	Run()
 	UpdateAvailable(ver string) error

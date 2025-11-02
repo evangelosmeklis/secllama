@@ -9,10 +9,8 @@ import (
 )
 
 func NewTray() (commontray.OllamaTray, error) {
-	extension := ".png"
-	if runtime.GOOS == "windows" {
-		extension = ".ico"
-	}
+	// Use .ico for all platforms as that's what we have in assets
+	extension := ".ico"
 	iconName := commontray.UpdateIconName + extension
 	updateIcon, err := assets.GetIcon(iconName)
 	if err != nil {

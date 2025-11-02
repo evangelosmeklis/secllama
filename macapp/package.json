@@ -1,8 +1,8 @@
 {
-  "name": "ollama",
-  "productName": "Ollama",
+  "name": "secllama",
+  "productName": "SecLlama",
   "version": "0.0.0",
-  "description": "ollama",
+  "description": "Secure, Private, Offline AI",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",

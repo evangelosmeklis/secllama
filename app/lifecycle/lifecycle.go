@@ -69,14 +69,14 @@ func Run() {
 	}
 
 	if IsServerRunning(ctx) {
-		slog.Info("Detected another instance of ollama running, exiting")
+		slog.Info("Detected another instance of SecLlama running, exiting")
 		os.Exit(1)
 	} else {
 		done, err = SpawnServer(ctx, CLIName)
 		if err != nil {
 			// TODO - should we retry in a backoff loop?
 			// TODO - should we pop up a warning and maybe add a menu item to view application logs?
-			slog.Error(fmt.Sprintf("Failed to spawn ollama server %s", err))
+			slog.Error(fmt.Sprintf("Failed to spawn SecLlama server %s", err))
 			done = make(chan int, 1)
 			done <- 1
 		}
@@ -86,9 +86,9 @@ func Run() {
 
 	t.Run()
 	cancel()
-	slog.Info("Waiting for ollama server to shutdown...")
+	slog.Info("Waiting for SecLlama server to shutdown...")
 	if done != nil {
 		<-done
 	}
-	slog.Info("Ollama app exiting")
+	slog.Info("SecLlama app exiting")
 }

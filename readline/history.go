@@ -2,14 +2,17 @@ package readline
 
 import (
 	"bufio"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/emirpasic/gods/v2/lists/arraylist"
+	"github.com/ollama/ollama/security"
 )
 
 type History struct {
@@ -43,7 +46,7 @@ func (h *History) Init() error {
 		return err
 	}
 
-	path := filepath.Join(home, ".ollama", "history")
+	path := filepath.Join(home, ".secllama", "history")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -74,10 +77,54 @@ func (h *History) Init() error {
 			continue
 		}
 
-		h.Add(line)
+		// Decrypt line if it appears to be encrypted (base64)
+		decrypted := h.decryptLine(line)
+		h.Add(decrypted)
 	}
 
 	return nil
+}
+
+// decryptLine attempts to decrypt a history line
+func (h *History) decryptLine(line string) string {
+	// Check if line looks like base64 (encrypted)
+	if len(line) > 0 && isBase64(line) {
+		mgr, err := security.GetManager()
+		if err != nil {
+			slog.Warn("failed to get security manager for history decryption", "error", err)
+			return line // Return as-is if can't decrypt
+		}
+		
+		decrypted, err := mgr.DecryptMessage(line)
+		if err != nil {
+			// Not encrypted or corrupted, return original
+			return line
+		}
+		return decrypted
+	}
+	return line
+}
+
+// encryptLine encrypts a history line
+func (h *History) encryptLine(line string) string {
+	mgr, err := security.GetManager()
+	if err != nil {
+		slog.Warn("failed to get security manager for history encryption", "error", err)
+		return line // Store unencrypted if encryption unavailable
+	}
+	
+	encrypted, err := mgr.EncryptMessage(line)
+	if err != nil {
+		slog.Warn("failed to encrypt history line", "error", err)
+		return line // Store unencrypted on error
+	}
+	return encrypted
+}
+
+// isBase64 checks if a string is valid base64
+func isBase64(s string) bool {
+	_, err := base64.StdEncoding.DecodeString(s)
+	return err == nil
 }
 
 func (h *History) Add(s string) {
@@ -138,7 +185,9 @@ func (h *History) Save() error {
 	buf := bufio.NewWriter(f)
 	for cnt := range h.Size() {
 		line, _ := h.Buf.Get(cnt)
-		fmt.Fprintln(buf, line)
+		// Encrypt each line before saving
+		encrypted := h.encryptLine(line)
+		fmt.Fprintln(buf, encrypted)
 	}
 	buf.Flush()
 	f.Close()

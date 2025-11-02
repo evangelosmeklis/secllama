@@ -1587,15 +1587,15 @@ func versionHandler(cmd *cobra.Command, _ []string) {
 
 	serverVersion, err := client.Version(cmd.Context())
 	if err != nil {
-		fmt.Println("Warning: could not connect to a running Ollama instance")
+		fmt.Println("Warning: could not connect to a running SecLlama instance")
 	}
 
 	if serverVersion != "" {
-		fmt.Printf("ollama version is %s\n", serverVersion)
+		fmt.Printf("secllama version is %s\n", serverVersion)
 	}
 
 	if serverVersion != version.Version {
-		fmt.Printf("Warning: client version is %s\n", version.Version)
+		fmt.Printf("Warning: secllama client version is %s\n", version.Version)
 	}
 }
 
@@ -1623,8 +1623,8 @@ func NewCLI() *cobra.Command {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:           "ollama",
-		Short:         "Large language model runner",
+		Use:           "secllama",
+		Short:         "Secure, private, offline large language model runner",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		CompletionOptions: cobra.CompletionOptions{
@@ -1696,7 +1696,7 @@ func NewCLI() *cobra.Command {
 	serveCmd := &cobra.Command{
 		Use:     "serve",
 		Aliases: []string{"start"},
-		Short:   "Start ollama",
+		Short:   "Start secllama",
 		Args:    cobra.ExactArgs(0),
 		RunE:    RunServer,
 	}

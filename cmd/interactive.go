@@ -79,7 +79,7 @@ func generateInteractive(cmd *cobra.Command, opts runOptions) error {
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "  Ctrl + l            Clear the screen")
 		fmt.Fprintln(os.Stderr, "  Ctrl + c            Stop the model from responding")
-		fmt.Fprintln(os.Stderr, "  Ctrl + d            Exit ollama (/bye)")
+		fmt.Fprintln(os.Stderr, "  Ctrl + d            Exit secllama (/bye)")
 		fmt.Fprintln(os.Stderr, "")
 	}
 

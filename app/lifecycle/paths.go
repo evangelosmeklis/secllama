@@ -11,16 +11,16 @@ import (
 )
 
 var (
-	AppName    = "ollama app"
-	CLIName    = "ollama"
-	AppDir     = "/opt/Ollama"
-	AppDataDir = "/opt/Ollama"
+	AppName    = "secllama app"
+	CLIName    = "secllama"
+	AppDir     = "/opt/SecLlama"
+	AppDataDir = "/opt/SecLlama"
 	// TODO - should there be a distinct log dir?
 	UpdateStageDir   = "/tmp"
-	AppLogFile       = "/tmp/ollama_app.log"
-	ServerLogFile    = "/tmp/ollama.log"
-	UpgradeLogFile   = "/tmp/ollama_update.log"
-	Installer        = "OllamaSetup.exe"
+	AppLogFile       = "/tmp/secllama_app.log"
+	ServerLogFile    = "/tmp/secllama.log"
+	UpgradeLogFile   = "/tmp/secllama_update.log"
+	Installer        = "SecLlamaSetup.exe"
 	LogRotationCount = 5
 )
 
@@ -30,7 +30,7 @@ func init() {
 		CLIName += ".exe"
 		// Logs, configs, downloads go to LOCALAPPDATA
 		localAppData := os.Getenv("LOCALAPPDATA")
-		AppDataDir = filepath.Join(localAppData, "Ollama")
+		AppDataDir = filepath.Join(localAppData, "SecLlama")
 		UpdateStageDir = filepath.Join(AppDataDir, "updates")
 		AppLogFile = filepath.Join(AppDataDir, "app.log")
 		ServerLogFile = filepath.Join(AppDataDir, "server.log")
@@ -39,7 +39,7 @@ func init() {
 		exe, err := os.Executable()
 		if err != nil {
 			slog.Warn("error discovering executable directory", "error", err)
-			AppDir = filepath.Join(localAppData, "Programs", "Ollama")
+			AppDir = filepath.Join(localAppData, "Programs", "SecLlama")
 		} else {
 			AppDir = filepath.Dir(exe)
 		}

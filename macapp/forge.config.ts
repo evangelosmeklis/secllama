@@ -7,8 +7,8 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack'
 import * as path from 'path'
 import * as fs from 'fs'
 
-import { mainConfig } from './webpack.main.config'
-import { rendererConfig } from './webpack.renderer.config'
+import { mainConfig } from './webpack.main.config.ts'
+import { rendererConfig } from './webpack.renderer.config.ts'
 
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './package.json'), 'utf8'))
 
@@ -18,8 +18,7 @@ const config: ForgeConfig = {
     asar: true,
     icon: './assets/icon.icns',
     extraResource: [
-      path.join(__dirname, '../dist/darwin/ollama'),
-      ...fs.readdirSync(path.join(__dirname, '../dist/darwin-amd64/lib/ollama')).map(f => path.join(__dirname, '../dist/darwin-amd64/lib/ollama', f)),
+      path.join(__dirname, '../secllama'),  // Use secllama binary from parent directory
       path.join(__dirname, './assets/iconTemplate.png'),
       path.join(__dirname, './assets/iconTemplate@2x.png'),
       path.join(__dirname, './assets/iconUpdateTemplate.png'),

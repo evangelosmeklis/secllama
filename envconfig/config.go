@@ -82,9 +82,14 @@ func AllowedOrigins() (origins []string) {
 	return origins
 }
 
-// Models returns the path to the models directory. Models directory can be configured via the OLLAMA_MODELS environment variable.
-// Default is $HOME/.ollama/models
+// Models returns the path to the models directory. Models directory can be configured via the OLLAMA_MODELS or SECLLAMA_MODELS environment variable.
+// Default is $HOME/.secllama/models (falls back to .ollama/models for compatibility)
 func Models() string {
+	// Check SecLlama-specific env var first
+	if s := Var("SECLLAMA_MODELS"); s != "" {
+		return s
+	}
+	// Fall back to OLLAMA_MODELS for compatibility
 	if s := Var("OLLAMA_MODELS"); s != "" {
 		return s
 	}
@@ -94,7 +99,7 @@ func Models() string {
 		panic(err)
 	}
 
-	return filepath.Join(home, ".ollama", "models")
+	return filepath.Join(home, ".secllama", "models")
 }
 
 // KeepAlive returns the duration that models stay loaded in memory. KeepAlive can be configured via the OLLAMA_KEEP_ALIVE environment variable.
