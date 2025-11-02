@@ -2,11 +2,16 @@ import { useState, useRef, useEffect } from 'react'
 import { getCurrentWindow } from '@electron/remote'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import Store from 'electron-store'
+import { encryptConversations, decryptConversations, initializeEncryption } from './encryption'
+
+const store = new Store()
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   thinkingTime?: number
+  thinkingProcess?: string
   thinkingDetails?: {
     evalDuration?: number
     evalCount?: number
@@ -34,7 +39,8 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   const [models, setModels] = useState<string[]>([])
   const [stats, setStats] = useState<SystemStats>({ cpu: 0, memory: 0 })
-  const [conversations, setConversations] = useState<string[]>([])
+  const [conversations, setConversations] = useState<Array<{id: string, title: string, messages: Message[]}>>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [expandedThinking, setExpandedThinking] = useState<Set<number>>(new Set())
   const [showSecurityModal, setShowSecurityModal] = useState(false)
   const [securityProof, setSecurityProof] = useState<SecurityProof>({
@@ -48,6 +54,42 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // Initialize encryption and load conversations
+    const initializeApp = async () => {
+      try {
+        // Create encryption key if it doesn't exist
+        await initializeEncryption()
+        
+        // Retrieve and display the key
+        setTimeout(() => {
+          retrieveEncryptionKey()
+        }, 500)
+        
+        // Load encrypted conversations
+        const encrypted = store.get('conversations_encrypted', '') as string
+        if (encrypted) {
+          const decrypted = await decryptConversations(encrypted)
+          setConversations(decrypted)
+        } else {
+          // Check for legacy unencrypted conversations and encrypt them
+          const legacy = store.get('conversations', []) as Array<{id: string, title: string, messages: Message[]}>
+          if (legacy.length > 0) {
+            console.log('Migrating legacy conversations to encrypted storage...')
+            setConversations(legacy)
+            // Encrypt and save
+            const encryptedLegacy = await encryptConversations(legacy)
+            store.set('conversations_encrypted', encryptedLegacy)
+            store.delete('conversations') // Remove unencrypted version
+            console.log('✓ Legacy conversations encrypted')
+          }
+        }
+      } catch (err) {
+        console.error('Failed to initialize app:', err)
+      }
+    }
+    
+    initializeApp()
+
     // Fetch available models
     fetch('http://localhost:11434/api/tags')
       .then(res => res.json())
@@ -69,8 +111,9 @@ export default function Chat() {
       })
     }, 2000)
 
-    // Verify security features
+    // Verify security features and get encryption key
     verifySecurityFeatures()
+    retrieveEncryptionKey()
     const securityInterval = setInterval(verifySecurityFeatures, 15000)
 
     return () => {
@@ -92,6 +135,28 @@ export default function Chat() {
       exec(`open "${historyDir}"`)
     } catch (error) {
       console.error('Failed to open history folder:', error)
+    }
+  }
+
+  const retrieveEncryptionKey = async () => {
+    try {
+      const { exec } = require('child_process')
+      const { promisify } = require('util')
+      const execAsync = promisify(exec)
+      const os = require('os')
+      
+      try {
+        const { stdout } = await execAsync('security find-generic-password -s "secllama-encryption-key" -w 2>/dev/null')
+        if (stdout && stdout.trim()) {
+          setEncryptionKey(stdout.trim())
+        } else {
+          setEncryptionKey('No key found - will be created on first CLI use')
+        }
+      } catch (err) {
+        setEncryptionKey('No key found - will be created on first CLI use')
+      }
+    } catch (error) {
+      setEncryptionKey('Error retrieving key')
     }
   }
 
@@ -193,10 +258,65 @@ export default function Chat() {
       const endTime = Date.now()
       const thinkingTime = (endTime - startTime) / 1000
 
+      // Extract thinking process from response (for reasoning models like QwQ, DeepSeek-R1)
+      let thinkingProcess = ''
+      let finalContent = data.response || 'No response'
+      
+      // Detect thinking process - models output their internal reasoning first, then the answer
+      
+      // 1. Check for explicit thinking tags
+      const thinkTagRegex = /<think>([\s\S]*?)<\/think>([\s\S]*)/i
+      const thinkTagMatch = finalContent.match(thinkTagRegex)
+      if (thinkTagMatch) {
+        thinkingProcess = thinkTagMatch[1].trim()
+        finalContent = thinkTagMatch[2].trim()
+      }
+      
+      // 2. Look for thinking patterns (internal monologue indicators)
+      // Thinking often starts with phrases like "Okay,", "Hmm...", "Let me", etc.
+      // and contains self-referential language
+      if (!thinkingProcess) {
+        // Check if response starts with thinking indicators
+        const thinkingIndicators = /^(Okay,|Hmm\.\.\.|Alright,|Let me|I need to|First,|So,|Well,|Right,)/i
+        const hasThinkingStart = thinkingIndicators.test(finalContent)
+        
+        // Look for transition phrases that signal end of thinking
+        const transitionPhrases = [
+          /\n\n(Here's|Here are|So here|Based on|In summary|To summarize|The answer|My response)/i,
+          /\n\n([A-Z][^.!?]*(?:is|are|would be|should|can|will):)/,  // Sentences that start answers
+          /Key things to address:\s*\n\n/i,
+          /\n\n(?:That's a|That's an|This is a|This is an)/i
+        ]
+        
+        if (hasThinkingStart) {
+          for (const pattern of transitionPhrases) {
+            const match = finalContent.match(pattern)
+            if (match) {
+              const splitIndex = match.index + match[0].length
+              thinkingProcess = finalContent.substring(0, match.index).trim()
+              finalContent = finalContent.substring(splitIndex).trim()
+              break
+            }
+          }
+        }
+      }
+      
+      // 3. If no explicit transition found but response is long and starts with thinking indicators
+      // Try to find a natural break where structured answer begins
+      if (!thinkingProcess && finalContent.length > 400) {
+        const thinkingPattern = /^((?:Okay|Hmm|Alright|Let me|So|Well)[^]*?)(\n{2,}(?:[A-Z#*]|[0-9]+\.|-))/
+        const thinkMatch = finalContent.match(thinkingPattern)
+        if (thinkMatch && thinkMatch[1].length > 100) {
+          thinkingProcess = thinkMatch[1].trim()
+          finalContent = finalContent.substring(thinkMatch[1].length).trim()
+        }
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.response || 'No response',
+        content: finalContent,
         thinkingTime,
+        thinkingProcess: thinkingProcess || undefined,
         thinkingDetails: {
           evalDuration: data.eval_duration ? data.eval_duration / 1e9 : undefined,
           evalCount: data.eval_count,
@@ -205,12 +325,44 @@ export default function Chat() {
             : undefined
         }
       }
-      setMessages(prev => [...prev, assistantMessage])
-      
-      // Add to conversations if first message
-      if (messages.length === 0) {
-        setConversations(prev => [input.slice(0, 50) + '...', ...prev])
-      }
+      setMessages(prev => {
+        const updatedMessages = [...prev, assistantMessage]
+        
+        // Save to conversation history (encrypted)
+        if (currentConversationId) {
+          // Update existing conversation
+          setConversations(prevConvs => {
+            const updated = prevConvs.map(conv => 
+              conv.id === currentConversationId 
+                ? { ...conv, messages: updatedMessages }
+                : conv
+            )
+            // Persist encrypted to electron-store
+            encryptConversations(updated).then(encrypted => {
+              store.set('conversations_encrypted', encrypted)
+            })
+            return updated
+          })
+        } else {
+          // Create new conversation
+          const newConvId = Date.now().toString()
+          setCurrentConversationId(newConvId)
+          setConversations(prevConvs => {
+            const updated = [{
+              id: newConvId,
+              title: input.slice(0, 50) + (input.length > 50 ? '...' : ''),
+              messages: updatedMessages
+            }, ...prevConvs]
+            // Persist encrypted to electron-store
+            encryptConversations(updated).then(encrypted => {
+              store.set('conversations_encrypted', encrypted)
+            })
+            return updated
+          })
+        }
+        
+        return updatedMessages
+      })
     } catch (error) {
       const errorMessage: Message = {
         role: 'assistant',
@@ -236,6 +388,45 @@ export default function Chat() {
 
   const newChat = () => {
     setMessages([])
+    setCurrentConversationId(null)
+    setExpandedThinking(new Set())
+  }
+
+  const loadConversation = (convId: string) => {
+    const conv = conversations.find(c => c.id === convId)
+    if (conv) {
+      setMessages([...conv.messages]) // Create new array to force re-render
+      setCurrentConversationId(convId)
+      setExpandedThinking(new Set())
+      // Scroll to top when switching conversations
+      setTimeout(() => {
+        const chatArea = document.querySelector('.flex-1.overflow-y-auto')
+        if (chatArea) {
+          chatArea.scrollTop = 0
+        }
+      }, 100)
+    }
+  }
+
+  const deleteConversation = async (convId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    const updated = conversations.filter(c => c.id !== convId)
+    setConversations(updated)
+    
+    // Immediately save encrypted (permanently delete from disk)
+    try {
+      const encrypted = await encryptConversations(updated)
+      store.set('conversations_encrypted', encrypted)
+      console.log('✓ Conversation permanently deleted and storage updated')
+    } catch (err) {
+      console.error('Failed to update encrypted storage:', err)
+    }
+    
+    if (currentConversationId === convId) {
+      setMessages([])
+      setCurrentConversationId(null)
+    }
   }
 
   return (
@@ -291,8 +482,8 @@ export default function Chat() {
                     {showKey ? 'Hide' : 'Show'}
                   </button>
                 </div>
-                <div className="font-mono text-xs text-gray-300 bg-black rounded p-3 break-all">
-                  {showKey ? (encryptionKey || 'Loading...') : '••••••••••••••••••••••••••••••••'}
+                <div className="font-mono text-xs text-gray-300 bg-black rounded p-3 break-all max-h-32 overflow-y-auto">
+                  {showKey ? (encryptionKey || 'Retrieving key...') : '••••••••••••••••••••••••••••••••'}
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   This key is stored securely in your macOS Keychain and used for AES-256-GCM encryption.
@@ -301,7 +492,10 @@ export default function Chat() {
 
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <button
-                  onClick={() => verifySecurityFeatures()}
+                  onClick={() => {
+                    verifySecurityFeatures()
+                    retrieveEncryptionKey()
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
                 >
                   🔄 Refresh
@@ -341,12 +535,23 @@ export default function Chat() {
         {/* Conversations */}
         <div className="flex-1 overflow-y-auto px-3">
           <div className="text-xs font-semibold text-gray-500 mb-2 px-3">Today</div>
-          {conversations.map((conv, idx) => (
+          {conversations.map((conv) => (
             <div
-              key={idx}
-              className="px-3 py-2 text-sm rounded-lg hover:bg-gray-800 cursor-pointer truncate mb-1"
+              key={conv.id}
+              onClick={() => loadConversation(conv.id)}
+              className={`group px-3 py-2 text-sm rounded-lg hover:bg-gray-800 cursor-pointer truncate mb-1 transition-colors flex items-center justify-between ${
+                currentConversationId === conv.id ? 'bg-gray-800' : ''
+              }`}
             >
-              {conv}
+              <span className="truncate">{conv.title}</span>
+              <button
+                onClick={(e) => deleteConversation(conv.id, e)}
+                className="opacity-0 group-hover:opacity-100 ml-2 text-gray-500 hover:text-red-400 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           ))}
         </div>
@@ -481,24 +686,39 @@ export default function Chat() {
                   )}
                   
                   {/* Thinking Details */}
-                  {msg.role === 'assistant' && expandedThinking.has(idx) && msg.thinkingDetails && (
-                    <div className="mb-3 bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 text-xs space-y-2">
-                      <div className="text-gray-300 font-semibold mb-2">Processing Details:</div>
-                      <div className="space-y-1 text-gray-400 font-mono">
-                        <div>• Model: <span className="text-blue-400">{model}</span></div>
-                        <div>• Environment: <span className="text-green-400">Sandboxed ✓</span></div>
-                        <div>• Network: <span className="text-red-400">Blocked ✓</span></div>
-                        <div>• Encryption: <span className="text-green-400">Active ✓</span></div>
-                        {msg.thinkingDetails.evalDuration && (
-                          <div>• Inference time: <span className="text-purple-400">{msg.thinkingDetails.evalDuration.toFixed(2)}s</span></div>
-                        )}
-                        {msg.thinkingDetails.evalCount && (
-                          <div>• Tokens generated: <span className="text-purple-400">{msg.thinkingDetails.evalCount}</span></div>
-                        )}
-                        {msg.thinkingDetails.tokensPerSecond && (
-                          <div>• Processing speed: <span className="text-purple-400">{msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</span></div>
-                        )}
-                      </div>
+                  {msg.role === 'assistant' && expandedThinking.has(idx) && (
+                    <div className="mb-3 bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 text-sm space-y-3">
+                      {/* Show thinking process if available */}
+                      {msg.thinkingProcess && (
+                        <div className="mb-3 pb-3 border-b border-gray-700">
+                          <div className="text-gray-400 font-semibold text-xs mb-2">Reasoning Process:</div>
+                          <div className="text-gray-300 leading-relaxed whitespace-pre-wrap text-sm max-h-96 overflow-y-auto">
+                            {msg.thinkingProcess}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show technical details */}
+                      {msg.thinkingDetails && (
+                        <div>
+                          <div className="text-gray-400 font-semibold text-xs mb-2">Technical Details:</div>
+                          <div className="space-y-1 text-gray-500 font-mono text-xs">
+                            <div>• Model: <span className="text-blue-400">{model}</span></div>
+                            <div>• Environment: <span className="text-green-400">Sandboxed ✓</span></div>
+                            <div>• Network: <span className="text-red-400">Blocked ✓</span></div>
+                            <div>• Encryption: <span className="text-green-400">Active ✓</span></div>
+                            {msg.thinkingDetails.evalDuration && (
+                              <div>• Inference time: <span className="text-purple-400">{msg.thinkingDetails.evalDuration.toFixed(2)}s</span></div>
+                            )}
+                            {msg.thinkingDetails.evalCount && (
+                              <div>• Tokens generated: <span className="text-purple-400">{msg.thinkingDetails.evalCount}</span></div>
+                            )}
+                            {msg.thinkingDetails.tokensPerSecond && (
+                              <div>• Processing speed: <span className="text-purple-400">{msg.thinkingDetails.tokensPerSecond.toFixed(2)} tokens/sec</span></div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -544,12 +764,18 @@ export default function Chat() {
                 </div>
               ))}
               {loading && (
-                <div className="flex justify-start mb-4">
-                  <div className="bg-[#2a2a2a] rounded-2xl px-4 py-3">
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                <div className="mb-4">
+                  <div className="mb-2 flex items-center space-x-2 text-xs text-gray-400">
+                    <span className="animate-pulse">▶</span>
+                    <span>Thinking...</span>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-[#2a2a2a] rounded-2xl px-4 py-3">
+                      <div className="flex space-x-2">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
                     </div>
                   </div>
                 </div>
