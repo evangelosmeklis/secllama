@@ -311,7 +311,7 @@ export default function Chat() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
               🔒
             </div>
             <span className="font-semibold text-lg">SecLlama</span>
@@ -412,24 +412,6 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Models List */}
-          <div className="bg-[#1a1a1a] rounded-lg p-3">
-            <div className="text-xs font-semibold text-gray-400 mb-2">Local Models ({models.length})</div>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {models.slice(0, 5).map((m, idx) => (
-                <div 
-                  key={idx}
-                  className="text-xs text-gray-300 flex items-center space-x-1.5 py-1"
-                >
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span className="truncate">{m}</span>
-                </div>
-              ))}
-              {models.length > 5 && (
-                <div className="text-xs text-gray-500 pt-1">+{models.length - 5} more</div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
