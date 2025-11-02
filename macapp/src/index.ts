@@ -80,7 +80,12 @@ function firstRunWindow() {
   welcomeWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY)
   welcomeWindow.on('ready-to-show', () => welcomeWindow.show())
   welcomeWindow.on('closed', () => {
-    if (process.platform === 'darwin') {
+    welcomeWindow = null
+    // Check if we should open chat after setup
+    if (store.get('open-chat')) {
+      store.delete('open-chat')
+      openChatWindow()
+    } else if (process.platform === 'darwin') {
       app.dock.hide()
     }
   })
